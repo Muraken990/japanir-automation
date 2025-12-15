@@ -1,0 +1,68 @@
+name: X Posting - Japan IR
+
+on:
+  schedule:
+    # 月-金 20:00 JST (11:00 UTC) - 1日1回のみ
+    - cron: '0 11 * * 1-5'
+  
+  # 手動実行を許可
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '日付 (YYYYMMDD)'
+        required: false
+        default: ''
+
+jobs:
+  post-to-x:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests tweepy python-dateutil
+      
+      - name: Get current date
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+          else
+            echo "date=$(TZ='Asia/Tokyo' date +%Y%m%d)" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run X posting script
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          DATE="${{ github.event.inputs.date || steps.date.outputs.date }}"
+          
+          echo "📅 日付: $DATE"
+          echo "⏰ 時刻範囲: 00:00 - 23:59 (全時間帯)"
+          
+          python IR-JsonToX.py \
+            --date "$DATE" \
+            --time-start "00:00" \
+            --time-end "23:59"
+      
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: x-posting-logs-${{ steps.date.outputs.date }}
+          path: |
+            *.log
+          retention-days: 7
