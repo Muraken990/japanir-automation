@@ -3,7 +3,7 @@ name: X Posting - Japan IR
 on:
   schedule:
     # 月-金 20:00 JST (11:00 UTC) - 1日1回のみ
-    - cron: '0 11 * * 1-5'
+    # - cron: '0 11 * * 1-5'
   
   # 手動実行を許可
   workflow_dispatch:
