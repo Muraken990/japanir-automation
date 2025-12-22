@@ -69,6 +69,7 @@ jobs:
       # ステップ6: 画像生成
       # ============================================================
       - name: Generate IR Image
+        id: generate
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -81,16 +82,18 @@ jobs:
           # 生成された画像を確認
           if [ -f "japan_ir_highlights_${{ steps.date.outputs.date }}.png" ]; then
             echo "✅ 画像生成成功"
+            echo "has_image=true" >> $GITHUB_OUTPUT
             ls -lh japan_ir_highlights_${{ steps.date.outputs.date }}.png
           else
-            echo "❌ 画像生成失敗"
-            exit 1
+            echo "ℹ️ IR情報なし - 投稿スキップ"
+            echo "has_image=false" >> $GITHUB_OUTPUT
           fi
-      
+          
       # ============================================================
       # ステップ7: X投稿
       # ============================================================
       - name: Post to X (Twitter)
+        if: steps.generate.outputs.has_image == 'true'
         env:
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
