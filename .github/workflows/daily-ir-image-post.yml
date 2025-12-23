@@ -46,7 +46,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install requests openai python-dateutil jinja2 playwright tweepy
+          pip install requests openai python-dateutil jinja2 playwright tweepy google-generativeai
           playwright install chromium
       
       # ============================================================
