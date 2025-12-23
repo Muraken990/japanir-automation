@@ -196,10 +196,10 @@ if __name__ == "__main__":
         print(f"❌ 引数のフォーマットエラー: {e}")
         sys.exit(1)
     
-    # OpenAI API Key チェック
-    if not os.getenv('OPENAI_API_KEY'):
-        print("❌ エラー: OPENAI_API_KEY 環境変数が設定されていません")
-        print("export OPENAI_API_KEY='your-api-key-here'")
+    # Gemini API Key チェック
+    if not os.getenv('GEMINI_API_KEY'):
+        print("❌ エラー: GEMINI_API_KEY 環境変数が設定されていません")
+        print("export GEMINI_API_KEY='your-api-key-here'")
         sys.exit(1)
     
     # メイン処理実行
