@@ -73,9 +73,9 @@ def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_h
     print("")
     
     # ============================================================
-    # ステップ1: WordPress API + OpenAI要約
+    # ステップ1: WordPress API取得
     # ============================================================
-    print("📝 ステップ1/3: IR情報取得 + OpenAI要約")
+    print("📝 ステップ1/3: IR情報取得")
     print("-" * 70)
     
     ir_list = ir_summarizer.main(date_str, time_start, time_end)

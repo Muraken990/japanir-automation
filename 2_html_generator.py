@@ -11,7 +11,7 @@ IR-JsonToX.pyと同じ引数形式
     python 2_html_generator.py --date 20251220 --time-start 08:00 --time-end 20:00
 
 必要なライブラリ:
-    pip install jinja2 requests openai python-dateutil
+    pip install jinja2 requests python-dateutil
 """
 
 import argparse
@@ -105,16 +105,11 @@ class HTMLGenerator:
         # IR情報を整形
         formatted_ir_list = []
         for ir in ir_list:
-            # デバッグ: one_sentence_summaryの確認
-            print(f"🔍 デバッグ: {ir['company_name']}")
-            print(f"   one_sentence_summary: {ir.get('one_sentence_summary', 'なし')[:80]}...")
-            
             formatted_ir = {
                 'company_name': ir['company_name'],
                 'stock_code': ir['stock_code'],
                 'ir_type': ir['ir_type'],
                 'category_display': CATEGORY_DISPLAY.get(ir['ir_type'], 'Other'),
-                'summary': ir.get('one_sentence_summary', ir['short_summary'])
             }
             formatted_ir_list.append(formatted_ir)
         
@@ -161,8 +156,8 @@ def main(date_str, time_start, time_end, output_path=None):
     print(f"時刻範囲: {time_start} - {time_end}")
     print("")
     
-    # ステップ1: 1_ir_summarizer.pyでIR情報取得 + 要約
-    print("📝 ステップ1: IR情報取得 + OpenAI要約")
+    # ステップ1: 1_ir_summarizer.pyでIR情報取得
+    print("📝 ステップ1: IR情報取得")
     print("-" * 60)
     
     ir_list = ir_summarizer.main(date_str, time_start, time_end)

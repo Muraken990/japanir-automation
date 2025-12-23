@@ -4,14 +4,14 @@
 """
 ir_summarizer.py
 
-WordPress REST APIからIR情報を取得し、OpenAI APIで1文要約
+WordPress REST APIからIR情報を取得・処理
 IR-JsonToX.pyと同じ引数・処理フローに対応
 
 使用方法:
     python ir_summarizer.py --date 20251215 --time-start 08:00 --time-end 12:00
 
 必要なライブラリ:
-    pip install requests openai python-dateutil
+    pip install requests python-dateutil
 """
 
 import argparse
@@ -22,12 +22,11 @@ from datetime import datetime
 
 try:
     import requests
-    from openai import OpenAI
     from dateutil import parser as dateutil_parser
 except ImportError as e:
     print(f"❌ 必要なライブラリがインストールされていません: {e}")
     print("以下のコマンドでインストールしてください:")
-    print("pip install requests openai python-dateutil")
+    print("pip install requests python-dateutil")
     sys.exit(1)
 
 
@@ -165,78 +164,12 @@ class IRDataProcessor:
 
 
 # ============================================================
-# OpenAI要約クラス
-# ============================================================
-
-class IRSummarizer:
-    def __init__(self, api_key=None):
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        if not self.api_key:
-            raise ValueError("OpenAI API Keyが設定されていません")
-        self.client = OpenAI(api_key=self.api_key)
-    
-    def summarize_to_one_sentence(self, ir_data):
-        company_name = ir_data.get('company_name', '')
-        ir_type = ir_data.get('ir_type', '').replace('_', ' ').title()
-        summary = ir_data.get('short_summary', '')
-        
-        prompt = f"""Summarize this Japanese corporate IR announcement into ONE concise sentence.
-
-Requirements:
-- Maximum 20 words
-- Focus on KEY NUMBERS and ACTIONS
-- Use <span class="bold">...</span> for important terms and numbers
-- Be specific and quantitative
-- Remove company name (already displayed separately)
-
-Company: {company_name}
-Type: {ir_type}
-Original Summary: {summary}
-
-Format examples:
-- "Completed <span class="bold">treasury stock tender offer</span> acquiring <span class="bold">24.9M shares</span> at <span class="bold">¥5,220</span>/share."
-- "Acquiring <span class="bold">41%</span> of <span class="bold">Peanuts Holdings</span> from WildBrain, total stake to <span class="bold">80%</span>."
-
-Guidelines for bold tags:
-- Numbers with units (shares, yen, percentages)
-- Key financial terms (buyback, tender offer, acquisition)
-- Company/entity names being acquired
-- Important positions (Chairman, President)
-
-ONE SENTENCE SUMMARY:"""
-
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-4.1-mini",
-                messages=[
-                    {"role": "system", "content": "You are a financial news expert specializing in concise, number-focused corporate announcements. Always output valid HTML with proper span tags."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=100,
-                temperature=0.3
-            )
-            
-            summary_text = response.choices[0].message.content.strip()
-            
-            # バリデーション
-            if summary_text.count('<span') != summary_text.count('</span>'):
-                print(f"⚠️  警告: spanタグが不正 - {company_name}")
-                summary_text = summary_text.replace('<span class="bold">', '').replace('</span>', '')
-            
-            return summary_text
-        
-        except Exception as e:
-            print(f"❌ OpenAI API エラー ({company_name}): {e}")
-            return summary
-
-
-# ============================================================
 # メイン処理
 # ============================================================
 
 def main(date_str, time_start, time_end):
     print("=" * 60)
-    print("🚀 IR要約処理開始")
+    print("🚀 IR情報取得処理開始")
     print("=" * 60)
     print(f"日付: {date_str}")
     print(f"時刻範囲: {time_start} - {time_end}")
@@ -261,33 +194,19 @@ def main(date_str, time_start, time_end):
     ir_list = processor.remove_duplicate_companies(ir_list)
     ir_list = processor.select_top_n(ir_list, 5)
     
-    # ステップ4: OpenAI要約
     print("")
     print("=" * 60)
-    print("🤖 OpenAI APIで要約生成中...")
+    print("✅ IR情報取得完了")
     print("=" * 60)
-    
-    summarizer = IRSummarizer()
     
     for i, ir in enumerate(ir_list, 1):
-        print(f"\n[{i}/5] {ir['company_name']} ({ir['stock_code']})")
-        print(f"元の要約: {ir['short_summary'][:80]}...")
-        
-        one_sentence = summarizer.summarize_to_one_sentence(ir)
-        ir['one_sentence_summary'] = one_sentence
-        
-        print(f"1文要約: {one_sentence}")
-    
-    print("")
-    print("=" * 60)
-    print("✅ 要約完了")
-    print("=" * 60)
+        print(f"[{i}/5] {ir['company_name']} ({ir['stock_code']}) - {ir['ir_type']}")
     
     return ir_list
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='WordPress APIからIR情報取得→OpenAI要約')
+    parser = argparse.ArgumentParser(description='WordPress APIからIR情報取得')
     parser.add_argument('--date', required=True, help='日付（YYYYMMDD形式）例: 20251215')
     parser.add_argument('--time-start', required=True, help='開始時刻（HH:MM形式）例: 08:00')
     parser.add_argument('--time-end', required=True, help='終了時刻（HH:MM形式）例: 12:00')
@@ -301,12 +220,6 @@ if __name__ == "__main__":
         datetime.strptime(args.time_end, '%H:%M')
     except ValueError as e:
         print(f"❌ 引数のフォーマットエラー: {e}")
-        sys.exit(1)
-    
-    # OpenAI API Key チェック
-    if not os.getenv('OPENAI_API_KEY'):
-        print("❌ エラー: OPENAI_API_KEY 環境変数が設定されていません")
-        print("export OPENAI_API_KEY='your-api-key-here'")
         sys.exit(1)
     
     # メイン処理実行
