@@ -110,6 +110,7 @@ class HTMLGenerator:
                 'stock_code': ir['stock_code'],
                 'ir_type': ir['ir_type'],
                 'category_display': CATEGORY_DISPLAY.get(ir['ir_type'], 'Other'),
+                'summary': ir.get('summary', '')
             }
             formatted_ir_list.append(formatted_ir)
         
@@ -156,8 +157,8 @@ def main(date_str, time_start, time_end, output_path=None):
     print(f"時刻範囲: {time_start} - {time_end}")
     print("")
     
-    # ステップ1: 1_ir_summarizer.pyでIR情報取得
-    print("📝 ステップ1: IR情報取得")
+    # ステップ1: 1_ir_summarizer.pyでIR情報取得＋要約
+    print("📝 ステップ1: IR情報取得＋要約")
     print("-" * 60)
     
     ir_list = ir_summarizer.main(date_str, time_start, time_end)

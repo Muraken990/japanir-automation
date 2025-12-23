@@ -101,13 +101,14 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: space-evenly;
+            justify-content: flex-start;
             overflow: hidden;
-            gap: 12px;
+            gap: 10px;
+            padding-top: 25px;
         }
 
         .ir-item {
-            padding: 15px 0;
+            padding: 7px 0;
         }
 
         .company-line {
@@ -189,6 +190,11 @@
             color: white;
         }
 
+        .category.business_update {
+            background: #17a2b8;
+            color: white;
+        }
+
         .category.general_ir {
             background: #6c757d;
             color: white;
@@ -236,6 +242,20 @@
             font-weight: 600;
             text-decoration: none;
         }
+
+        .summary {
+            color: #757575;
+            font-size: 18px;
+            font-weight: 400;
+            margin-top: 6px;
+            line-height: 1.4;
+            padding-left: 2px;
+        }
+
+        .summary .bold {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
     </style>
 </head>
 
@@ -257,6 +277,9 @@
                     </div>
                     <div class="category {{ ir.ir_type }}">{{ ir.category_display }}</div>
                 </div>
+                {% if ir.summary %}
+                <div class="summary">{{ ir.summary|safe }}</div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
