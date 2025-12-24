@@ -67,7 +67,7 @@ CATEGORY_PRIORITY = {
 def get_importance_stars(importance_str):
     if not importance_str:
         return 0
-    match = re.search(r'[★☆â˜…](\d+)', str(importance_str))
+    match = re.search(r'[★☆](\d+)', str(importance_str))
     if match:
         return int(match.group(1))
     return 0
