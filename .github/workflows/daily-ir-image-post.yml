@@ -72,6 +72,7 @@ jobs:
         id: generate
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python 4_IR_ImageGenerator.py \
             --date ${{ steps.date.outputs.date }} \
