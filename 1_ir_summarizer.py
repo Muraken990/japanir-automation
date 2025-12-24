@@ -4,14 +4,14 @@
 """
 ir_summarizer.py
 
-WordPress REST APIからIR情報を取得し、Gemini APIで簡潔な要約を生成
+WordPress REST APIからIR情報を取得・処理
 IR-JsonToX.pyと同じ引数・処理フローに対応
 
 使用方法:
     python ir_summarizer.py --date 20251215 --time-start 08:00 --time-end 12:00
 
 必要なライブラリ:
-    pip install requests python-dateutil google-generativeai
+    pip install requests python-dateutil
 """
 
 import argparse
@@ -23,11 +23,10 @@ from datetime import datetime
 try:
     import requests
     from dateutil import parser as dateutil_parser
-    import google.generativeai as genai
 except ImportError as e:
     print(f"❌ 必要なライブラリがインストールされていません: {e}")
     print("以下のコマンドでインストールしてください:")
-    print("pip install requests python-dateutil google-generativeai")
+    print("pip install requests python-dateutil")
     sys.exit(1)
 
 
@@ -165,88 +164,12 @@ class IRDataProcessor:
 
 
 # ============================================================
-# Gemini要約クラス（簡潔版）
-# ============================================================
-
-class IRSummarizer:
-    def __init__(self, api_key=None):
-        self.api_key = api_key or os.getenv('GEMINI_API_KEY')
-        if not self.api_key:
-            raise ValueError("Gemini API Keyが設定されていません")
-        
-        # Gemini APIの設定
-        genai.configure(api_key=self.api_key)
-        
-        # モデルの初期化（gemini-2.5-pro = 最高品質）
-        self.model = genai.GenerativeModel(
-            model_name='gemini-2.5-pro',
-            generation_config={
-                'temperature': 0.3,
-            }
-        )
-    
-    def summarize_ultra_concise(self, ir_data):
-        """
-        超簡潔な要約を生成（数字とキーワードのみ、最大40文字）
-        """
-        import time
-        
-        company_name = ir_data.get('company_name', '')
-        ir_type = ir_data.get('ir_type', '').replace('_', ' ').title()
-        summary = ir_data.get('short_summary', '')
-        
-        prompt = f"""Extract ONLY key numbers and 2-3 keywords. Maximum 40 characters total.
-
-Company: {company_name}
-Type: {ir_type}
-Summary: {summary}
-
-Format: "Number • Keyword • Keyword"
-- Use <span class="bold">NUMBER</span> for all numbers
-- Keep keywords short
-- Use • as separator
-
-Examples:
-- "Acquired <span class="bold">6.2M shares</span> at <span class="bold">¥847</span>"
-- "Dividend <span class="bold">+20%</span> to <span class="bold">¥80</span>"
-- "<span class="bold">$500M</span> buyback"
-- "Q3 profit <span class="bold">+12%</span>"
-- "TOB completed • <span class="bold">33.3%</span> max voting"
-
-Output (max 40 chars):"""
-
-        try:
-            print(f"  🔍 プロンプト長: {len(prompt)} chars")
-            
-            start_time = time.time()
-            print(f"  ⏱️  API呼び出し開始...")
-            
-            response = self.model.generate_content(prompt)
-            
-            api_time = time.time() - start_time
-            print(f"  ⏱️  API応答時間: {api_time:.2f}秒")
-            
-            summary_text = response.text.strip()
-            print(f"  📝 レスポンス長: {len(summary_text)} chars")
-            
-            # HTMLタグの検証
-            if summary_text.count('<span') != summary_text.count('</span>'):
-                summary_text = summary_text.replace('<span class="bold">', '').replace('</span>', '')
-            
-            return summary_text
-        
-        except Exception as e:
-            print(f"❌ Gemini API エラー ({company_name}): {e}")
-            return ""
-
-
-# ============================================================
 # メイン処理
 # ============================================================
 
 def main(date_str, time_start, time_end):
     print("=" * 60)
-    print("🚀 IR情報取得＋要約処理開始")
+    print("🚀 IR情報取得処理開始")
     print("=" * 60)
     print(f"日付: {date_str}")
     print(f"時刻範囲: {time_start} - {time_end}")
@@ -271,25 +194,9 @@ def main(date_str, time_start, time_end):
     ir_list = processor.remove_duplicate_companies(ir_list)
     ir_list = processor.select_top_n(ir_list, 5)
     
-    # ステップ4: Gemini要約（簡潔版）
     print("")
     print("=" * 60)
-    print("🤖 Gemini APIで簡潔な要約生成中...")
-    print("=" * 60)
-    
-    summarizer = IRSummarizer()
-    
-    for i, ir in enumerate(ir_list, 1):
-        print(f"\n[{i}/5] {ir['company_name']} ({ir['stock_code']})")
-        
-        summary = summarizer.summarize_ultra_concise(ir)
-        ir['summary'] = summary
-        
-        print(f"要約: {summary}")
-    
-    print("")
-    print("=" * 60)
-    print("✅ 要約完了")
+    print("✅ IR情報取得完了")
     print("=" * 60)
     
     for i, ir in enumerate(ir_list, 1):
@@ -299,7 +206,7 @@ def main(date_str, time_start, time_end):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='WordPress APIからIR情報取得→Gemini簡潔要約')
+    parser = argparse.ArgumentParser(description='WordPress APIからIR情報取得')
     parser.add_argument('--date', required=True, help='日付（YYYYMMDD形式）例: 20251215')
     parser.add_argument('--time-start', required=True, help='開始時刻（HH:MM形式）例: 08:00')
     parser.add_argument('--time-end', required=True, help='終了時刻（HH:MM形式）例: 12:00')
@@ -313,12 +220,6 @@ if __name__ == "__main__":
         datetime.strptime(args.time_end, '%H:%M')
     except ValueError as e:
         print(f"❌ 引数のフォーマットエラー: {e}")
-        sys.exit(1)
-    
-    # Gemini API Key チェック
-    if not os.getenv('GEMINI_API_KEY'):
-        print("❌ エラー: GEMINI_API_KEY 環境変数が設定されていません")
-        print("export GEMINI_API_KEY='your-api-key-here'")
         sys.exit(1)
     
     # メイン処理実行
