@@ -110,6 +110,7 @@ class HTMLGenerator:
                 'stock_code': ir['stock_code'],
                 'ir_type': ir['ir_type'],
                 'category_display': CATEGORY_DISPLAY.get(ir['ir_type'], 'Other'),
+                'summary': ir.get('short_summary', ''),
             }
             formatted_ir_list.append(formatted_ir)
         

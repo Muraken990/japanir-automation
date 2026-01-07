@@ -319,56 +319,83 @@ class TweetGenerator:
     
     def generate_tweet(self, ir_list, date_str):
         """
-        X投稿文を生成
-        
+        X投稿文を生成（Pattern 3: Card Style）
+
         Args:
             ir_list: Top N のIR情報リスト
             date_str: 日付（YYYYMMDD）
-        
+
         Returns:
             str: 投稿文
         """
-        # 日付フォーマット: Dec 15, 2025
+        # 日付フォーマット: December 23, 2025
         date_obj = datetime.strptime(date_str, '%Y%m%d')
-        formatted_date = date_obj.strftime('%b %d, %Y')
-        
-        # ヘッダー
+        formatted_date = date_obj.strftime('%B %d, %Y')
+
+        # ヘッダー（Pattern 3スタイル）
         lines = [
-            f"🇯🇵 Japan IR Highlights - {formatted_date}",
+            f"🇯🇵 JapanIR Highlights",
+            f"{formatted_date}",
             ""
         ]
-        
-        # 各IR
+
+        # 各IR（Card Style）
         for ir in ir_list:
             stock_code = ir['stock_code']
             company_name = ir['company_name']
-            ir_type = ir['ir_type'].replace('_', ' ').title()
+            ir_type = self._format_ir_type(ir['ir_type'])
             summary = ir['short_summary']
-            
-            # "✅ Company Name (CODE) - IR Type"（星なし）
-            line = f"✅ {company_name} ({stock_code}) - {ir_type}"
-            lines.append(line)
+
+            # Card Style: 企業名 + コード
+            lines.append(f"▪️ {company_name} ({stock_code})")
+            # サマリー + カテゴリタグ
+            lines.append(f"   {summary} [{ir_type}]")
             lines.append("")
-            
-            # 要約
-            lines.append(summary)
-            lines.append("")
-        
+
         # フッター
-        lines.append("📊 Full analysis: japanir.jp/en")
-        lines.append("")
+        lines.append("📊 japanir.jp/en")
         lines.append("#JapanStocks #IR")
-        
+
         tweet = "\n".join(lines)
-        
+
         # 文字数チェック
         if len(tweet) > self.max_length:
             print(f"⚠️ 投稿文が長すぎます: {len(tweet)}文字（最大{self.max_length}文字）")
-            # 簡易的に切り詰め（本来はより洗練された処理が必要）
-            tweet = tweet[:self.max_length - 100] + "\n\n...\n\n📊 japanir.jp/en\n\n#JapanStocks #IR"
-        
+            tweet = tweet[:self.max_length - 80] + "\n\n...\n\n📊 japanir.jp/en\n#JapanStocks #IR"
+
         print(f"📝 投稿文生成完了: {len(tweet)}文字")
         return tweet
+
+    def _format_ir_type(self, ir_type):
+        """
+        IR種別を表示用にフォーマット
+
+        Args:
+            ir_type: IR種別（例: "financial_summary"）
+
+        Returns:
+            str: 表示用の種別名
+        """
+        type_mapping = {
+            'financial_summary': 'Earnings',
+            'share_buyback': 'Share Buyback',
+            'share_cancellation': 'Share Cancellation',
+            'dividend': 'Dividend',
+            'earnings_guidance': 'Guidance',
+            'executive_change': 'Executive',
+            'sales_update': 'Sales Update',
+            'disclosure_update': 'Disclosure',
+            'capital_policy': 'Capital Policy',
+            'tender_offer': 'TOB',
+            'corporate_restructuring': 'Restructuring',
+            'm_and_a_alliance': 'M&A',
+            'product_announcement': 'Product',
+            'business_update': 'Business Update',
+            'stock_option': 'Stock Option',
+            'esg_sustainability': 'ESG',
+            'general_ir': 'IR'
+        }
+        return type_mapping.get(ir_type, ir_type.replace('_', ' ').title())
 
 
 # ============================================================

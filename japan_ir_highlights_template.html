@@ -4,21 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Japan IR Highlights - {{ date }}</title>
+    <title>JapanIR Highlights - {{ date }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #1a237e;
-            --primary-light: #534bae;
-            --primary-dark: #051938;
-            --secondary: #0066cc;
-            --accent: #e63946;
-            --warning: #f59f00;
-            --success: #28a745;
-            --text-primary: #212121;
-            --text-secondary: #757575;
+            --primary-500: #3B82F6;
+            --primary-600: #2563EB;
+            --primary-800: #1E40AF;
+            --accent: #06B6D4;
+            --gray-100: #F1F5F9;
+            --gray-200: #E2E8F0;
+            --gray-500: #64748B;
+            --gray-800: #1E293B;
         }
 
         * {
@@ -28,8 +30,8 @@
         }
 
         body {
-            font-family: 'Roboto', 'Noto Sans JP', sans-serif;
-            background: #f5f7fa;
+            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+            background: #E2E8F0;
             padding: 0;
             margin: 0;
             width: 100%;
@@ -39,186 +41,148 @@
             align-items: center;
         }
 
+        /* Pattern 3: Card Style */
         .tweet-card {
             width: 1200px;
             height: 675px;
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            position: relative;
-            overflow: hidden;
+            background: linear-gradient(180deg, var(--gray-100) 0%, var(--gray-200) 100%);
             display: flex;
             flex-direction: column;
-            flex-shrink: 0;
+            overflow: hidden;
         }
 
         .header {
-            background: #1a237e;
-            padding: 16px 35px;
+            background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+            padding: 28px 48px;
+            position: relative;
+            overflow: hidden;
             flex-shrink: 0;
         }
 
-        .header h1 {
-            color: white;
-            font-size: 34px;
-            font-weight: 900;
-            margin-bottom: 4px;
-            letter-spacing: -0.5px;
-        }
-
-        .header .subtitle {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .header .date {
-            color: rgba(255, 255, 255, 0.85);
-            font-size: 16px;
-            font-weight: 500;
-            margin-top: 3px;
-        }
-
-        .header {
-            background: #1a237e;
-            padding: 20px 35px;
-            flex-shrink: 0;
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 40%;
+            height: 200%;
+            background: radial-gradient(ellipse, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
         }
 
         .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
             color: white;
-            font-size: 36px;
-            font-weight: 900;
-            margin-bottom: 5px;
-            letter-spacing: -0.5px;
+            position: relative;
+        }
+
+        .header h1 span {
+            color: #22D3EE;
         }
 
         .header .date {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 18px;
-            font-weight: 500;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 4px;
+            position: relative;
         }
 
         .content {
             flex: 1;
+            padding: 24px 40px;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
+            gap: 12px;
             overflow: hidden;
-            gap: 10px;
-            padding-top: 25px;
         }
 
         .ir-item {
-            padding: 7px 0;
-        }
-
-        .company-line {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             display: flex;
-            justify-content: flex-start;
+            justify-content: space-between;
             align-items: center;
-            margin-bottom: 0;
-            gap: 15px;
+            border: 1px solid var(--gray-200);
         }
 
-        .company-info {
+        .ir-item-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .ir-item-header {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
         .company-name {
-            font-size: 28px;
+            font-size: 1.15rem;
             font-weight: 700;
-            color: var(--text-primary);
-            font-family: 'Roboto', sans-serif;
+            color: var(--gray-800);
         }
 
         .stock-code {
-            background: var(--primary-color);
+            background: var(--primary-600);
             color: white;
-            padding: 5px 12px;
+            padding: 3px 10px;
             border-radius: 5px;
-            font-size: 20px;
-            font-weight: 700;
-            font-family: 'Roboto', monospace;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
-        .category {
-            font-size: 16px;
-            font-weight: 600;
-            padding: 6px 16px;
-            border-radius: 5px;
+        .ir-summary {
+            font-size: 0.85rem;
+            color: var(--gray-500);
+            line-height: 1.4;
+            max-width: 800px;
+            overflow: hidden;
+            text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        .category.tender_offer {
-            background: #f59f00;
+        .ir-summary strong {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .category-tag {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
             color: white;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
-        .category.m_and_a_alliance {
-            background: #0066cc;
-            color: white;
-        }
-
-        .category.share_buyback {
-            background: #f59f00;
-            color: white;
-        }
-
-        .category.dividend {
-            background: #28a745;
-            color: white;
-        }
-
-        .category.financial_summary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .category.executive_change {
-            background: #8e24aa;
-            color: white;
-        }
-
-        .category.corporate_restructuring {
-            background: #dc3545;
-            color: white;
-        }
-
-        .category.product_announcement {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .category.business_update {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .category.general_ir {
-            background: #6c757d;
-            color: white;
-        }
-
-        .category.other {
-            background: #6c757d;
-            color: white;
-        }
-
-        .description {
-            color: var(--text-primary);
-            line-height: 1.35;
-            font-size: 14px;
-            font-weight: 400;
-        }
-
-        .bold {
-            font-weight: 700;
-        }
+        /* Category Colors */
+        .category-tag.tender_offer { background: #F59E0B; }
+        .category-tag.m_and_a_alliance { background: var(--primary-600); }
+        .category-tag.share_buyback { background: #F59E0B; }
+        .category-tag.share_cancellation { background: #F59E0B; }
+        .category-tag.dividend { background: #10B981; }
+        .category-tag.financial_summary { background: #64748B; }
+        .category-tag.earnings_guidance { background: #64748B; }
+        .category-tag.executive_change { background: #8B5CF6; }
+        .category-tag.sales_update { background: #64748B; }
+        .category-tag.disclosure_update { background: #64748B; }
+        .category-tag.capital_policy { background: #EC4899; }
+        .category-tag.corporate_restructuring { background: #EF4444; }
+        .category-tag.product_announcement { background: #0EA5E9; }
+        .category-tag.business_update { background: #0EA5E9; }
+        .category-tag.stock_option { background: #F59E0B; }
+        .category-tag.esg_sustainability { background: #10B981; }
+        .category-tag.general_ir { background: #64748B; }
 
         .footer {
-            background: #1a237e;
-            padding: 14px 35px;
+            padding: 16px 48px;
+            background: white;
+            border-top: 1px solid var(--gray-200);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -226,35 +190,25 @@
         }
 
         .footer-logo {
-            color: white;
-            font-size: 22px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--gray-800);
         }
 
-        .footer-logo .ir {
+        .footer-logo span {
             color: var(--accent);
         }
 
-        .footer-link {
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            text-decoration: none;
+        .footer-url {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray-500);
+            font-size: 0.85rem;
         }
 
-        .summary {
-            color: #757575;
-            font-size: 18px;
-            font-weight: 400;
-            margin-top: 6px;
-            line-height: 1.4;
-            padding-left: 2px;
-        }
-
-        .summary .bold {
-            font-weight: 700;
-            color: var(--text-primary);
+        .footer-url i {
+            color: var(--primary-500);
         }
     </style>
 </head>
@@ -262,31 +216,30 @@
 <body>
     <div class="tweet-card">
         <div class="header">
-            <h1>Japan<span style="color: #e63946;">IR</span> Alert</h1>
+            <h1>Japan<span>IR</span> Highlights</h1>
             <div class="date">{{ date }} • 20:00 JST</div>
         </div>
 
-        <div class="content" style="padding: 25px 35px; background: white;">
+        <div class="content">
             {% for ir in ir_list %}
-            <!-- IR項目{{ loop.index }}: {{ ir.company_name }} -->
             <div class="ir-item">
-                <div class="company-line">
-                    <div class="company-info">
-                        <div class="company-name">{{ ir.company_name }}</div>
-                        <div class="stock-code">{{ ir.stock_code }}</div>
+                <div class="ir-item-left">
+                    <div class="ir-item-header">
+                        <span class="company-name">{{ ir.company_name }}</span>
+                        <span class="stock-code">{{ ir.stock_code }}</span>
                     </div>
-                    <div class="category {{ ir.ir_type }}">{{ ir.category_display }}</div>
+                    {% if ir.summary %}
+                    <div class="ir-summary">{{ ir.summary|safe }}</div>
+                    {% endif %}
                 </div>
-                {% if ir.summary %}
-                <div class="summary">{{ ir.summary|safe }}</div>
-                {% endif %}
+                <span class="category-tag {{ ir.ir_type }}">{{ ir.category_display }}</span>
             </div>
             {% endfor %}
         </div>
 
         <div class="footer">
-            <div class="footer-logo">Japan <span class="ir">IR</span></div>
-            <div class="footer-link">📊 japanir.jp/en</div>
+            <div class="footer-logo">Japan<span>IR</span></div>
+            <div class="footer-url"><i class="fas fa-chart-bar"></i> japanir.jp/en</div>
         </div>
     </div>
 </body>
