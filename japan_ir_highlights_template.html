@@ -99,65 +99,49 @@
         .ir-item {
             background: white;
             border-radius: 12px;
-            padding: 16px 20px;
+            padding: 14px 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 12px;
             border: 1px solid var(--gray-200);
-        }
-
-        .ir-item-left {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1;
-        }
-
-        .ir-item-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
         .company-name {
             font-size: 1.15rem;
             font-weight: 700;
             color: var(--gray-800);
+            white-space: nowrap;
         }
 
         .stock-code {
             background: var(--primary-600);
             color: white;
-            padding: 3px 10px;
+            padding: 4px 12px;
             border-radius: 5px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .ir-summary {
             font-size: 0.85rem;
-            color: var(--gray-500);
-            line-height: 1.4;
-            max-width: 800px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .ir-summary strong {
-            color: #059669;
             font-weight: 600;
+            flex-shrink: 0;
         }
 
         .category-tag {
-            padding: 6px 16px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: white;
             white-space: nowrap;
             flex-shrink: 0;
+        }
+
+        .ir-summary {
+            font-size: 1rem;
+            color: var(--gray-500);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: left;
         }
 
         /* Category Colors */
@@ -223,16 +207,12 @@
         <div class="content">
             {% for ir in ir_list %}
             <div class="ir-item">
-                <div class="ir-item-left">
-                    <div class="ir-item-header">
-                        <span class="company-name">{{ ir.company_name }}</span>
-                        <span class="stock-code">{{ ir.stock_code }}</span>
-                    </div>
-                    {% if ir.summary %}
-                    <div class="ir-summary">{{ ir.summary|safe }}</div>
-                    {% endif %}
-                </div>
+                <span class="company-name">{{ ir.company_name }}</span>
+                <span class="stock-code">{{ ir.stock_code }}</span>
                 <span class="category-tag {{ ir.ir_type }}">{{ ir.category_display }}</span>
+                {% if ir.keyword %}
+                <span class="ir-summary">{{ ir.keyword }}</span>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

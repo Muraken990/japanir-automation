@@ -27,10 +27,11 @@ try:
     import requests
     import tweepy
     from dateutil import parser as dateutil_parser
+    from openai import OpenAI
 except ImportError as e:
     print(f"❌ 必要なライブラリがインストールされていません: {e}")
     print("以下のコマンドでインストールしてください:")
-    print("pip install requests tweepy python-dateutil")
+    print("pip install requests tweepy python-dateutil openai")
     sys.exit(1)
 
 
@@ -313,13 +314,46 @@ class IRDataProcessor:
 
 class TweetGenerator:
     """X投稿文を生成するクラス"""
-    
+
     def __init__(self, max_length=2000):
         self.max_length = max_length
+        # OpenAI クライアント初期化
+        api_key = os.getenv('OPENAI_API_KEY')
+        self.openai_client = OpenAI(api_key=api_key) if api_key else None
+
+    def _generate_keyword_with_ai(self, summary):
+        """AIで30-40文字キーワードを生成"""
+        if not summary or not self.openai_client:
+            return ''
+
+        try:
+            prompt = f"""Summarize this IR news in around 30 characters, max 45 characters (English).
+Focus on: target company, amount, or key metric.
+Examples:
+- "Sells Toyota Industries ¥51.9B"
+- "Operating profit +170% YoY"
+- "Acquires Senkushia ¥69B"
+
+Input: {summary}
+Output: (around 30 chars, max 45, no quotes)"""
+
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=60
+            )
+
+            keyword = response.choices[0].message.content.strip()
+            # 引用符を除去
+            keyword = keyword.strip('"\'')
+            return keyword[:45]
+        except Exception as e:
+            print(f"⚠️ キーワード生成エラー: {e}")
+            return ''
     
     def generate_tweet(self, ir_list, date_str):
         """
-        X投稿文を生成（Pattern 3: Card Style）
+        X投稿文を生成（簡潔フォーマット + AIキーワード）
 
         Args:
             ir_list: Top N のIR情報リスト
@@ -328,32 +362,35 @@ class TweetGenerator:
         Returns:
             str: 投稿文
         """
-        # 日付フォーマット: December 23, 2025
+        # 日付フォーマット: January 15, 2026
         date_obj = datetime.strptime(date_str, '%Y%m%d')
         formatted_date = date_obj.strftime('%B %d, %Y')
 
-        # ヘッダー（Pattern 3スタイル）
+        # ヘッダー
         lines = [
-            f"🇯🇵 JapanIR Highlights",
-            f"{formatted_date}",
+            f"🇯🇵 JapanIR Highlights - {formatted_date}",
             ""
         ]
 
-        # 各IR（Card Style）
+        # 各IR（簡潔フォーマット）
         for ir in ir_list:
             stock_code = ir['stock_code']
             company_name = ir['company_name']
             ir_type = self._format_ir_type(ir['ir_type'])
-            summary = ir['short_summary']
+            summary = ir.get('short_summary', '')
 
-            # Card Style: 企業名 + コード
-            lines.append(f"▪️ {company_name} ({stock_code})")
-            # サマリー + カテゴリタグ
-            lines.append(f"   {summary} [{ir_type}]")
+            # AIでキーワード生成
+            keyword = self._generate_keyword_with_ai(summary)
+
+            # 企業名 + コード + カテゴリ
+            lines.append(f"✅ {company_name} ({stock_code}) - {ir_type}")
+            # 1行キーワード
+            if keyword:
+                lines.append(f"   → {keyword}")
             lines.append("")
 
         # フッター
-        lines.append("📊 japanir.jp/en")
+        lines.append("📊 Details: japanir.jp/en")
         lines.append("#JapanStocks #IR")
 
         tweet = "\n".join(lines)

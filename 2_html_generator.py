@@ -19,6 +19,7 @@ import sys
 import os
 from datetime import datetime
 from jinja2 import Template
+from openai import OpenAI
 
 # 1_ir_summarizer.pyをインポート
 try:
@@ -66,24 +67,57 @@ class HTMLGenerator:
     """
     IR情報をHTMLテンプレートに挿入するクラス
     """
-    
+
     def __init__(self, template_path='japan_ir_highlights_template.html'):
         """
         初期化
-        
+
         Args:
             template_path: HTMLテンプレートファイルのパス
         """
         self.template_path = template_path
-        
+
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"テンプレートファイルが見つかりません: {template_path}")
-        
+
         # テンプレート読み込み
         with open(template_path, 'r', encoding='utf-8') as f:
             self.template_content = f.read()
-        
+
         self.template = Template(self.template_content)
+
+        # OpenAI クライアント初期化
+        api_key = os.getenv('OPENAI_API_KEY')
+        self.openai_client = OpenAI(api_key=api_key) if api_key else None
+
+    def _generate_keyword_with_ai(self, summary):
+        """AIで30-40文字キーワードを生成"""
+        if not summary or not self.openai_client:
+            return ''
+
+        try:
+            prompt = f"""Summarize this IR news in around 30 characters, max 45 characters (English).
+Focus on: target company, amount, or key metric.
+Examples:
+- "Sells Toyota Industries ¥51.9B"
+- "Operating profit +170% YoY"
+- "Acquires Senkushia ¥69B"
+
+Input: {summary}
+Output: (around 30 chars, max 45, no quotes)"""
+
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=60
+            )
+
+            keyword = response.choices[0].message.content.strip()
+            keyword = keyword.strip('"\'')
+            return keyword[:45]
+        except Exception as e:
+            print(f"⚠️ キーワード生成エラー: {e}")
+            return ''
     
     def generate_html(self, ir_list, date_str, output_path=None):
         """
@@ -105,12 +139,16 @@ class HTMLGenerator:
         # IR情報を整形
         formatted_ir_list = []
         for ir in ir_list:
+            # AIで30文字キーワードを生成
+            summary = ir.get('short_summary', '')
+            keyword = self._generate_keyword_with_ai(summary)
+
             formatted_ir = {
                 'company_name': ir['company_name'],
                 'stock_code': ir['stock_code'],
                 'ir_type': ir['ir_type'],
                 'category_display': CATEGORY_DISPLAY.get(ir['ir_type'], 'Other'),
-                'summary': ir.get('short_summary', ''),
+                'keyword': keyword,  # summaryからkeywordに変更
             }
             formatted_ir_list.append(formatted_ir)
         
