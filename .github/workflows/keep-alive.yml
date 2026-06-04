@@ -1,0 +1,24 @@
+name: Keep Alive
+
+on:
+  schedule:
+    # 58日ごとに実行（毎月1日と3月1日・5月1日・7月1日・9月1日・11月1日）
+    # 実質的に約58日以内に必ず実行されるよう毎月1日に実行
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Keep alive commit
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          echo "$(date +'%Y-%m-%d')" > .keep-alive
+          git add .keep-alive
+          git commit -m "chore: keep alive $(date +'%Y-%m-%d')"
+          git push
