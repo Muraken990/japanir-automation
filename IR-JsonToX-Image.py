@@ -279,14 +279,46 @@ class TwitterPoster:
             print(f"❌ 画像アップロードエラー: {e}")
             return None
     
+    def already_posted_today(self, date_str):
+        """同日の投稿が既に存在するか確認"""
+        try:
+            client = tweepy.Client(
+                consumer_key=self.api_key,
+                consumer_secret=self.api_secret,
+                access_token=self.access_token,
+                access_token_secret=self.access_secret
+            )
+            me = client.get_me()
+            if not me or not me.data:
+                return False
+
+            date_obj = datetime.strptime(date_str, '%Y%m%d')
+            date_label = date_obj.strftime('%b %d, %Y')  # "Jun 08, 2026"
+
+            tweets = client.get_users_tweets(
+                id=me.data.id,
+                max_results=10,
+                tweet_fields=['text', 'created_at']
+            )
+            if tweets and tweets.data:
+                for tweet in tweets.data:
+                    if date_label in tweet.text:
+                        print(f"⚠️ 本日分（{date_label}）の投稿が既に存在します: ID {tweet.id}")
+                        return True
+            return False
+
+        except Exception as e:
+            print(f"⚠️ 重複チェックエラー（スキップして続行）: {e}")
+            return False
+
     def post(self, tweet_text, image_path=None):
         """
         Xに投稿（画像添付オプション）
-        
+
         Args:
             tweet_text: 投稿文
             image_path: 画像ファイルのパス（省略可）
-        
+
         Returns:
             bool: 成功/失敗
         """
@@ -452,6 +484,12 @@ def main(date_str, time_start, time_end, image_path=None, dry_run=False):
     
     # 投稿実行
     poster = TwitterPoster(api_key, api_secret, access_token, access_secret)
+
+    # 重複チェック
+    if poster.already_posted_today(date_str):
+        print("✅ 本日分は投稿済みのためスキップします")
+        return True
+
     success = poster.post(tweet_text, image_path)
     
     return success
