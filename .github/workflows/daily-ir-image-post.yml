@@ -56,8 +56,14 @@ jobs:
         id: date
         run: |
           if [ -z "${{ github.event.inputs.date }}" ]; then
-            # cronの場合: 今日の日付（JST）
-            DATE=$(TZ=Asia/Tokyo date +%Y%m%d)
+            HOUR_JST=$(TZ=Asia/Tokyo date +%H)
+            if [ "$HOUR_JST" -lt "08" ]; then
+              # 深夜帯（0-7時JST）= GitHub Actionsの遅延で日付が変わった場合は前日を使う
+              DATE=$(TZ=Asia/Tokyo date -d "yesterday" +%Y%m%d)
+              echo "⚠️ 深夜帯実行 (${HOUR_JST}時JST) → 前日の日付を使用"
+            else
+              DATE=$(TZ=Asia/Tokyo date +%Y%m%d)
+            fi
           else
             # 手動実行の場合: 入力された日付
             DATE="${{ github.event.inputs.date }}"

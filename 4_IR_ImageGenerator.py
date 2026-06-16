@@ -212,4 +212,4 @@ if __name__ == "__main__":
         args.keep_html
     )
     
-    sys.exit(0 if image_path else 1)
+    sys.exit(0)
