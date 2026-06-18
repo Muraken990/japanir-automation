@@ -229,10 +229,12 @@ class TweetGenerator:
         ir_type = ir['ir_type'].replace('_', ' ').title()
 
         company_line = f"{company_name} ({stock_code})" if stock_code else company_name
+        headline = f"Japan IR Highlight - {formatted_date}"
+        short_headline = f"IR Highlight - {formatted_date}"
 
         variants = [
             [
-                f"Japan IR Highlight {rank}/5 - {formatted_date}",
+                headline,
                 "",
                 company_line,
                 ir_type,
@@ -243,7 +245,7 @@ class TweetGenerator:
                 "#JapanStocks #IR",
             ],
             [
-                f"Japan IR Highlight {rank}/5 - {formatted_date}",
+                headline,
                 "",
                 company_line,
                 ir_type,
@@ -252,7 +254,7 @@ class TweetGenerator:
                 "#JapanStocks #IR",
             ],
             [
-                f"IR Highlight {rank}/5 - {formatted_date}",
+                short_headline,
                 "",
                 company_line,
                 ir_type,
@@ -261,7 +263,7 @@ class TweetGenerator:
                 "#JapanStocks #IR",
             ],
             [
-                f"IR Highlight {rank}/5 - {formatted_date}",
+                short_headline,
                 "",
                 f"{stock_code} - {ir_type}" if stock_code else ir_type,
                 "",
@@ -288,7 +290,7 @@ class TweetGenerator:
         formatted_date = date_obj.strftime('%b %d, %Y')
         
         if rank:
-            lines = [f"🇯🇵 Japan IR Highlight {rank}/5 - {formatted_date}", ""]
+            lines = [f"🇯🇵 Japan IR Highlight - {formatted_date}", ""]
         else:
             lines = [f"🇯🇵 Japan IR Highlights - {formatted_date}", ""]
         
@@ -361,7 +363,7 @@ class TwitterPoster:
             print(f"❌ 画像アップロードエラー: {e}")
             return None
     
-    def already_posted_today(self, date_str, rank=None):
+    def already_posted_today(self, date_str, rank=None, ir=None):
         """同日の投稿が既に存在するか確認"""
         try:
             client = tweepy.Client(
@@ -376,7 +378,12 @@ class TwitterPoster:
 
             date_obj = datetime.strptime(date_str, '%Y%m%d')
             date_label = date_obj.strftime('%b %d, %Y')  # "Jun 08, 2026"
-            marker = f"Japan IR Highlight {rank}/5 - {date_label}" if rank else date_label
+            markers = [f"Japan IR Highlight - {date_label}"] if rank else [date_label]
+
+            if rank and ir:
+                identifier = ir.get('stock_code') or ir.get('company_name')
+                if identifier:
+                    markers.append(str(identifier))
 
             tweets = client.get_users_tweets(
                 id=me.data.id,
@@ -385,8 +392,8 @@ class TwitterPoster:
             )
             if tweets and tweets.data:
                 for tweet in tweets.data:
-                    if marker in tweet.text:
-                        print(f"⚠️ 投稿済み（{marker}）: ID {tweet.id}")
+                    if all(marker in tweet.text for marker in markers):
+                        print(f"⚠️ 投稿済み（{' / '.join(markers)}）: ID {tweet.id}")
                         return True
             return False
 
@@ -580,7 +587,7 @@ def main(date_str, time_start, time_end, image_path=None, dry_run=False, rank=No
     poster = TwitterPoster(api_key, api_secret, access_token, access_secret)
 
     # 重複チェック
-    if poster.already_posted_today(date_str, rank=rank):
+    if poster.already_posted_today(date_str, rank=rank, ir=ir_list[0] if rank and ir_list else None):
         print("✅ 対象投稿は投稿済みのためスキップします")
         return True
 
