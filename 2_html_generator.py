@@ -17,6 +17,7 @@ IR-JsonToX.pyと同じ引数形式
 import argparse
 import sys
 import os
+import re
 from datetime import datetime
 from jinja2 import Template
 from openai import OpenAI
@@ -118,6 +119,79 @@ Output: (around 30 chars, max 45, no quotes)"""
         except Exception as e:
             print(f"⚠️ キーワード生成エラー: {e}")
             return ''
+
+    def _limit_to_words(self, text, max_chars=95):
+        """単語境界で短くする。省略記号は付けない。"""
+        text = re.sub(r'\s+', ' ', text or '').strip()
+        if len(text) <= max_chars:
+            return text
+
+        words = text.split()
+        kept_words = []
+        for word in words:
+            candidate = ' '.join(kept_words + [word])
+            if len(candidate) > max_chars:
+                break
+            kept_words.append(word)
+
+        return ' '.join(kept_words) if kept_words else text[:max_chars].rstrip()
+
+    def _remove_company_prefix(self, text, company_name):
+        """上段に会社名を出しているので、見出し冒頭の重複を取り除く。"""
+        text = re.sub(r'\s+', ' ', text or '').strip()
+        company_name = re.sub(r'\s+', ' ', company_name or '').strip()
+
+        if company_name and text.lower().startswith(company_name.lower()):
+            text = text[len(company_name):].lstrip(' ,.-:;')
+
+        return text[:1].upper() + text[1:] if text else text
+
+    def _fallback_single_headline(self, summary, company_name):
+        """AIが使えない場合の短縮見出し"""
+        headline_source = self._remove_company_prefix(summary, company_name)
+        first_sentence = re.split(r'(?<=[.!?])\s+', headline_source or '')[0]
+        headline = first_sentence or headline_source
+        return self._limit_to_words(headline, 95)
+
+    def _generate_single_headline_with_ai(self, ir, company_name, ir_type):
+        """単一企業画像用の短い見出しを生成"""
+        summary = (ir.get('short_summary') or '').strip()
+        if not summary:
+            return ir_type
+
+        if not self.openai_client:
+            return self._fallback_single_headline(summary, company_name)
+
+        try:
+            prompt = f"""Rewrite this IR summary into a concise image headline.
+
+Rules:
+- 8 to 14 words.
+- Max 95 characters.
+- Do not repeat the company name because it is shown separately.
+- Keep the key action, amount, stake, target, or metric.
+- Plain English only.
+- No hashtags, no quotes.
+
+Company: {company_name}
+Category: {ir_type}
+Summary: {summary}
+
+Headline:"""
+
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=80,
+                temperature=0.2
+            )
+
+            headline = response.choices[0].message.content.strip().strip('"\'')
+            headline = self._remove_company_prefix(headline, company_name)
+            return self._limit_to_words(headline, 95)
+        except Exception as e:
+            print(f"⚠️ 単一画像見出し生成エラー: {e}")
+            return self._fallback_single_headline(summary, company_name)
     
     def generate_html(self, ir_list, date_str, output_path=None):
         """
@@ -197,7 +271,7 @@ Output: (around 30 chars, max 45, no quotes)"""
         ticker = ir.get('stock_code') or ir.get('ticker') or ''
         company_name = ir.get('company_name', '')
         ir_type = CATEGORY_DISPLAY.get(ir.get('ir_type', ''), 'Other')
-        headline = ir.get('short_summary', '')
+        headline = self._generate_single_headline_with_ai(ir, company_name, ir_type)
 
         html_output = single_template.render(
             date=formatted_date,
