@@ -203,12 +203,15 @@ class TweetGenerator:
     def __init__(self, max_length=2000):
         self.max_length = max_length
     
-    def generate_tweet(self, ir_list, date_str):
+    def generate_tweet(self, ir_list, date_str, rank=None):
         """X投稿文を生成"""
         date_obj = datetime.strptime(date_str, '%Y%m%d')
         formatted_date = date_obj.strftime('%b %d, %Y')
         
-        lines = [f"🇯🇵 Japan IR Highlights - {formatted_date}", ""]
+        if rank:
+            lines = [f"🇯🇵 Japan IR Highlight {rank}/5 - {formatted_date}", ""]
+        else:
+            lines = [f"🇯🇵 Japan IR Highlights - {formatted_date}", ""]
         
         for ir in ir_list:
             stock_code = ir['stock_code']
@@ -279,7 +282,7 @@ class TwitterPoster:
             print(f"❌ 画像アップロードエラー: {e}")
             return None
     
-    def already_posted_today(self, date_str):
+    def already_posted_today(self, date_str, rank=None):
         """同日の投稿が既に存在するか確認"""
         try:
             client = tweepy.Client(
@@ -294,6 +297,7 @@ class TwitterPoster:
 
             date_obj = datetime.strptime(date_str, '%Y%m%d')
             date_label = date_obj.strftime('%b %d, %Y')  # "Jun 08, 2026"
+            marker = f"Japan IR Highlight {rank}/5 - {date_label}" if rank else date_label
 
             tweets = client.get_users_tweets(
                 id=me.data.id,
@@ -302,8 +306,8 @@ class TwitterPoster:
             )
             if tweets and tweets.data:
                 for tweet in tweets.data:
-                    if date_label in tweet.text:
-                        print(f"⚠️ 本日分（{date_label}）の投稿が既に存在します: ID {tweet.id}")
+                    if marker in tweet.text:
+                        print(f"⚠️ 投稿済み（{marker}）: ID {tweet.id}")
                         return True
             return False
 
@@ -406,7 +410,7 @@ JapanIR X投稿処理でエラーが発生しました。
 # メイン処理
 # ============================================================
 
-def main(date_str, time_start, time_end, image_path=None, dry_run=False):
+def main(date_str, time_start, time_end, image_path=None, dry_run=False, rank=None):
     """
     メイン処理
     
@@ -416,6 +420,7 @@ def main(date_str, time_start, time_end, image_path=None, dry_run=False):
         time_end: 終了時刻（HH:MM）
         image_path: 画像ファイルのパス（省略可）
         dry_run: テストモード
+        rank: TOP5内の投稿順位（1〜5、省略時は従来どおりTOP5まとめ）
     
     Returns:
         bool: 成功/失敗
@@ -427,6 +432,8 @@ def main(date_str, time_start, time_end, image_path=None, dry_run=False):
     print("=" * 60)
     print(f"日付: {date_str}")
     print(f"時刻範囲: {time_start} - {time_end}")
+    if rank:
+        print(f"投稿順位: {rank}")
     if image_path:
         print(f"画像: {image_path}")
     print("")
@@ -448,10 +455,18 @@ def main(date_str, time_start, time_end, image_path=None, dry_run=False):
     ir_list = processor.sort_by_priority(ir_list)
     ir_list = processor.remove_duplicate_companies(ir_list)
     ir_list = processor.select_top_n(ir_list, 5)
+
+    if rank:
+        if len(ir_list) < rank:
+            print(f"ℹ️ TOP5内のrank {rank}に該当するIR情報がありませんでした")
+            return True
+        selected_ir = ir_list[rank - 1]
+        print(f"🎯 投稿対象: {selected_ir.get('company_name', '')} ({selected_ir.get('stock_code', '')})")
+        ir_list = [selected_ir]
     
     # 投稿文生成
     generator = TweetGenerator()
-    tweet_text = generator.generate_tweet(ir_list, date_str)
+    tweet_text = generator.generate_tweet(ir_list, date_str, rank=rank)
     
     print("")
     print("=" * 60)
@@ -486,8 +501,8 @@ def main(date_str, time_start, time_end, image_path=None, dry_run=False):
     poster = TwitterPoster(api_key, api_secret, access_token, access_secret)
 
     # 重複チェック
-    if poster.already_posted_today(date_str):
-        print("✅ 本日分は投稿済みのためスキップします")
+    if poster.already_posted_today(date_str, rank=rank):
+        print("✅ 対象投稿は投稿済みのためスキップします")
         return True
 
     success = poster.post(tweet_text, image_path)
@@ -495,13 +510,13 @@ def main(date_str, time_start, time_end, image_path=None, dry_run=False):
     return success
 
 
-def main_with_retry(date_str, time_start, time_end, image_path=None, dry_run=False, max_retries=3):
+def main_with_retry(date_str, time_start, time_end, image_path=None, dry_run=False, max_retries=3, rank=None):
     """メイン処理（リトライ付き）"""
     for attempt in range(1, max_retries + 1):
         try:
             print(f"\n📝 試行 {attempt}/{max_retries}")
             
-            success = main(date_str, time_start, time_end, image_path, dry_run)
+            success = main(date_str, time_start, time_end, image_path, dry_run, rank)
             
             if success:
                 print("\n" + "=" * 60)
@@ -562,6 +577,13 @@ if __name__ == "__main__":
         help='X投稿に添付する画像ファイルのパス（省略可）'
     )
     parser.add_argument(
+        '--rank',
+        type=int,
+        choices=range(1, 6),
+        metavar='N',
+        help='投稿順位（1〜5、省略時は従来どおりTOP5まとめ）'
+    )
+    parser.add_argument(
         '--dry-run',
         action='store_true',
         help='テストモード（投稿文生成のみ、X投稿しない）'
@@ -578,6 +600,9 @@ if __name__ == "__main__":
         print(f"❌ 引数のフォーマットエラー: {e}")
         sys.exit(1)
     
+    if args.rank and not args.image_path:
+        args.image_path = f"japan_ir_single_{args.date}_rank{args.rank}.png"
+
     # 画像ファイル確認
     if args.image_path and not os.path.exists(args.image_path):
         print(f"⚠️ 警告: 画像ファイルが見つかりません: {args.image_path}")
@@ -590,7 +615,8 @@ if __name__ == "__main__":
         args.time_start, 
         args.time_end,
         args.image_path,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        rank=args.rank
     )
     
     sys.exit(0 if success else 1)

@@ -1,9 +1,13 @@
 name: Daily IR Image Post
 
 on:
-  # 月-金 09:00 UTC (18:00 JST) に実行
+  # 月-金 20:00/20:30/21:00/21:30/22:00 JST に実行
   schedule:
-    - cron: '0 9 * * 1-5'
+    - cron: '0 11 * * 1-5'
+    - cron: '30 11 * * 1-5'
+    - cron: '0 12 * * 1-5'
+    - cron: '30 12 * * 1-5'
+    - cron: '0 13 * * 1-5'
   
   # 手動実行も可能
   workflow_dispatch:
@@ -12,6 +16,10 @@ on:
         description: '日付（YYYYMMDD形式）'
         required: false
         default: ''
+      rank:
+        description: '投稿順位（1-5）'
+        required: false
+        default: '1'
 
 jobs:
   generate-and-post:
@@ -57,8 +65,8 @@ jobs:
         run: |
           if [ -z "${{ github.event.inputs.date }}" ]; then
             HOUR_JST=$(TZ=Asia/Tokyo date +%H)
-            if [ "$HOUR_JST" -lt "08" ]; then
-              # 深夜帯（0-7時JST）= GitHub Actionsの遅延で日付が変わった場合は前日を使う
+            if [ "$HOUR_JST" -lt "09" ]; then
+              # 深夜帯（0-8時JST）= GitHub Actionsの遅延で日付が変わった場合は前日を使う
               DATE=$(TZ=Asia/Tokyo date -d "yesterday" +%Y%m%d)
               echo "⚠️ 深夜帯実行 (${HOUR_JST}時JST) → 前日の日付を使用"
             else
@@ -70,9 +78,36 @@ jobs:
           fi
           echo "date=$DATE" >> $GITHUB_OUTPUT
           echo "📅 処理日付: $DATE"
+
+      # ============================================================
+      # ステップ6: 投稿順位設定
+      # ============================================================
+      - name: Set rank
+        id: rank
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.rank }}" ]; then
+            RANK="${{ github.event.inputs.rank }}"
+          else
+            case "${{ github.event.schedule }}" in
+              "0 11 * * 1-5") RANK=1 ;;
+              "30 11 * * 1-5") RANK=2 ;;
+              "0 12 * * 1-5") RANK=3 ;;
+              "30 12 * * 1-5") RANK=4 ;;
+              "0 13 * * 1-5") RANK=5 ;;
+              *) RANK=1 ;;
+            esac
+          fi
+
+          if ! echo "$RANK" | grep -Eq '^[1-5]$'; then
+            echo "❌ rank must be 1-5"
+            exit 1
+          fi
+
+          echo "rank=$RANK" >> $GITHUB_OUTPUT
+          echo "📌 投稿順位: $RANK"
       
       # ============================================================
-      # ステップ6: 画像生成
+      # ステップ7: 画像生成
       # ============================================================
       - name: Generate IR Image
         id: generate
@@ -84,20 +119,22 @@ jobs:
             --date ${{ steps.date.outputs.date }} \
             --time-start 08:00 \
             --time-end 20:00 \
+            --rank ${{ steps.rank.outputs.rank }} \
             -s 2
           
           # 生成された画像を確認
-          if [ -f "japan_ir_highlights_${{ steps.date.outputs.date }}.png" ]; then
+          IMAGE_PATH="japan_ir_single_${{ steps.date.outputs.date }}_rank${{ steps.rank.outputs.rank }}.png"
+          if [ -f "$IMAGE_PATH" ]; then
             echo "✅ 画像生成成功"
             echo "has_image=true" >> $GITHUB_OUTPUT
-            ls -lh japan_ir_highlights_${{ steps.date.outputs.date }}.png
+            ls -lh "$IMAGE_PATH"
           else
             echo "ℹ️ IR情報なし - 投稿スキップ"
             echo "has_image=false" >> $GITHUB_OUTPUT
           fi
           
       # ============================================================
-      # ステップ7: X投稿
+      # ステップ8: X投稿
       # ============================================================
       - name: Post to X (Twitter)
         if: steps.generate.outputs.has_image == 'true'
@@ -111,10 +148,11 @@ jobs:
             --date ${{ steps.date.outputs.date }} \
             --time-start 08:00 \
             --time-end 20:00 \
-            --image-path japan_ir_highlights_${{ steps.date.outputs.date }}.png
+            --rank ${{ steps.rank.outputs.rank }} \
+            --image-path japan_ir_single_${{ steps.date.outputs.date }}_rank${{ steps.rank.outputs.rank }}.png
       
       # ============================================================
-      # ステップ8: エラー通知（失敗時のみ）
+      # ステップ9: エラー通知（失敗時のみ）
       # ============================================================
       - name: Send error notification
         if: failure()

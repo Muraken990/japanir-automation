@@ -49,7 +49,16 @@ except Exception as e:
 # メイン処理
 # ============================================================
 
-def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_html=False):
+RANK_TO_POST_TIME = {
+    1: '20:00 JST',
+    2: '20:30 JST',
+    3: '21:00 JST',
+    4: '21:30 JST',
+    5: '22:00 JST',
+}
+
+
+def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_html=False, rank=1):
     """
     全自動画像生成メイン処理
     
@@ -60,15 +69,21 @@ def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_h
         output_image_path: 出力画像パス（省略時は自動生成）
         scale: デバイススケール（デフォルト: 2）
         keep_html: HTMLファイルを保持するか（デフォルト: False）
+        rank: TOP5内の投稿順位（1〜5）
     
     Returns:
         str: 生成された画像のパス
     """
+    if rank not in RANK_TO_POST_TIME:
+        print("❌ rankは1〜5で指定してください")
+        return None
+
     print("=" * 70)
     print("🚀 IR画像自動生成処理開始")
     print("=" * 70)
     print(f"日付: {date_str}")
     print(f"時刻範囲: {time_start} - {time_end}")
+    print(f"投稿順位: {rank}")
     print(f"画像スケール: {scale}x")
     print("")
     
@@ -83,6 +98,13 @@ def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_h
     if len(ir_list) == 0:
         print("ℹ️ 該当するIR情報がありませんでした")
         return None
+
+    if len(ir_list) < rank:
+        print(f"ℹ️ TOP5内のrank {rank}に該当するIR情報がありませんでした")
+        return None
+
+    selected_ir = ir_list[rank - 1]
+    print(f"🎯 選定企業: {selected_ir.get('company_name', '')} ({selected_ir.get('stock_code', '')})")
     
     print("")
     
@@ -93,10 +115,15 @@ def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_h
     print("-" * 70)
     
     # 一時HTMLファイル
-    temp_html_path = f"temp_japan_ir_{date_str}.html"
+    temp_html_path = f"temp_japan_ir_single_{date_str}_rank{rank}.html"
     
     generator = html_generator.HTMLGenerator()
-    html_path = generator.generate_html(ir_list, date_str, temp_html_path)
+    html_path = generator.generate_single_html(
+        selected_ir,
+        date_str,
+        RANK_TO_POST_TIME[rank],
+        temp_html_path
+    )
     
     print("")
     
@@ -108,11 +135,11 @@ def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_h
     
     # 出力画像パス
     if output_image_path is None:
-        output_image_path = f"japan_ir_highlights_{date_str}.png"
+        output_image_path = f"japan_ir_single_{date_str}_rank{rank}.png"
     
     img_generator = image_generator.ImageGenerator(
         width=1200,
-        height=675,
+        height=1200,
         scale=scale
     )
     
@@ -134,14 +161,13 @@ def main(date_str, time_start, time_end, output_image_path=None, scale=2, keep_h
         file_size = os.path.getsize(image_path) / 1024
         print(f"📊 画像情報:")
         print(f"  ファイル名: {os.path.basename(image_path)}")
-        print(f"  サイズ: 1200x{675}px")
+        print(f"  サイズ: 1200x1200px")
         print(f"  スケール: {scale}x")
         print(f"  ファイルサイズ: {file_size:.1f} KB")
         print("")
         print("次のステップ:")
         print("  1. 画像を確認")
-        print("  2. WordPressにアップロード（Phase 6）")
-        print("  3. X投稿（IR-JsonToX.py）")
+        print("  2. X投稿（IR-JsonToX-Image.py）")
     
     return image_path
 
@@ -168,6 +194,14 @@ if __name__ == "__main__":
         '--time-end',
         required=True,
         help='終了時刻（HH:MM形式）例: 20:00'
+    )
+    parser.add_argument(
+        '--rank',
+        type=int,
+        choices=range(1, 6),
+        default=1,
+        metavar='N',
+        help='投稿順位（1〜5、デフォルト: 1）'
     )
     parser.add_argument(
         '-o', '--output',
@@ -209,7 +243,8 @@ if __name__ == "__main__":
         args.time_end,
         args.output,
         args.scale,
-        args.keep_html
+        args.keep_html,
+        args.rank
     )
     
     sys.exit(0)

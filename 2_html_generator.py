@@ -170,6 +170,54 @@ Output: (around 30 chars, max 45, no quotes)"""
         
         return output_path
 
+    def generate_single_html(self, ir, date_str, time_label, output_path=None):
+        """
+        単一企業用HTMLを生成
+
+        Args:
+            ir: IR情報（1社分）
+            date_str: 日付（YYYYMMDD形式）
+            time_label: 投稿時刻ラベル（例: 20:00 JST）
+            output_path: 出力HTMLファイルパス（省略時は自動生成）
+
+        Returns:
+            str: 生成されたHTMLファイルのパス
+        """
+        single_template_path = 'japan_ir_single_template_draft.html'
+
+        if not os.path.exists(single_template_path):
+            raise FileNotFoundError(f"テンプレートファイルが見つかりません: {single_template_path}")
+
+        with open(single_template_path, 'r', encoding='utf-8') as f:
+            single_template = Template(f.read())
+
+        date_obj = datetime.strptime(date_str, '%Y%m%d')
+        formatted_date = f"{date_obj.strftime('%B')} {date_obj.day}, {date_obj.year}"
+
+        ticker = ir.get('stock_code') or ir.get('ticker') or ''
+        company_name = ir.get('company_name', '')
+        ir_type = CATEGORY_DISPLAY.get(ir.get('ir_type', ''), 'Other')
+        headline = ir.get('short_summary', '')
+
+        html_output = single_template.render(
+            date=formatted_date,
+            time=time_label,
+            ticker=ticker,
+            company_name=company_name,
+            ir_type=ir_type,
+            headline=headline
+        )
+
+        if output_path is None:
+            output_path = f'japan_ir_single_{date_str}.html'
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html_output)
+
+        print(f"✅ 単一企業HTML生成完了: {output_path}")
+
+        return output_path
+
 
 # ============================================================
 # メイン処理
