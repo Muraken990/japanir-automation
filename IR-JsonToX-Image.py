@@ -202,9 +202,88 @@ class TweetGenerator:
     
     def __init__(self, max_length=2000):
         self.max_length = max_length
+
+    def _x_weighted_length(self, text):
+        """Xの280文字制限に近い簡易カウント"""
+        url_pattern = re.compile(r'https?://\S+|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?:/\S*)?')
+        total = 0
+        last_end = 0
+
+        for match in url_pattern.finditer(text):
+            total += self._weighted_plain_text_length(text[last_end:match.start()])
+            total += 23
+            last_end = match.end()
+
+        total += self._weighted_plain_text_length(text[last_end:])
+        return total
+
+    def _weighted_plain_text_length(self, text):
+        return sum(2 if ord(char) > 0x1100 else 1 for char in text)
+
+    def _generate_single_company_tweet(self, ir, date_str, rank):
+        """無料プランでも投稿できる短文テンプレートを生成"""
+        date_obj = datetime.strptime(date_str, '%Y%m%d')
+        formatted_date = date_obj.strftime('%b %d, %Y')
+        stock_code = ir['stock_code']
+        company_name = ir['company_name']
+        ir_type = ir['ir_type'].replace('_', ' ').title()
+
+        company_line = f"{company_name} ({stock_code})" if stock_code else company_name
+
+        variants = [
+            [
+                f"Japan IR Highlight {rank}/5 - {formatted_date}",
+                "",
+                company_line,
+                ir_type,
+                "",
+                "See the key update in the image.",
+                "",
+                "japanir.jp/en",
+                "#JapanStocks #IR",
+            ],
+            [
+                f"Japan IR Highlight {rank}/5 - {formatted_date}",
+                "",
+                company_line,
+                ir_type,
+                "",
+                "japanir.jp/en",
+                "#JapanStocks #IR",
+            ],
+            [
+                f"IR Highlight {rank}/5 - {formatted_date}",
+                "",
+                company_line,
+                ir_type,
+                "",
+                "japanir.jp/en",
+                "#JapanStocks #IR",
+            ],
+            [
+                f"IR Highlight {rank}/5 - {formatted_date}",
+                "",
+                f"{stock_code} - {ir_type}" if stock_code else ir_type,
+                "",
+                "japanir.jp/en",
+                "#JapanStocks #IR",
+            ],
+        ]
+
+        for lines in variants:
+            tweet = "\n".join(lines)
+            if self._x_weighted_length(tweet) <= 280:
+                return tweet
+
+        return "\n".join(variants[-1])
     
     def generate_tweet(self, ir_list, date_str, rank=None):
         """X投稿文を生成"""
+        if rank and ir_list:
+            tweet = self._generate_single_company_tweet(ir_list[0], date_str, rank)
+            print(f"📝 投稿文生成完了: {len(tweet)}文字 / X換算 {self._x_weighted_length(tweet)}/280")
+            return tweet
+
         date_obj = datetime.strptime(date_str, '%Y%m%d')
         formatted_date = date_obj.strftime('%b %d, %Y')
         
