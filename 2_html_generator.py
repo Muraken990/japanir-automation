@@ -136,13 +136,39 @@ Output: (around 30 chars, max 45, no quotes)"""
 
         return ' '.join(kept_words) if kept_words else text[:max_chars].rstrip()
 
+    def _company_name_variants(self, company_name):
+        """会社名の完全名と短縮名候補を作る"""
+        normalized = re.sub(r'\s+', ' ', company_name or '').strip()
+        if not normalized:
+            return []
+
+        variants = {normalized}
+        suffix_patterns = [
+            r',?\s+Co\.?,?\s+Ltd\.?$',
+            r',?\s+Co\.?,?\s+Limited$',
+            r',?\s+Corporation$',
+            r',?\s+Inc\.?$',
+            r',?\s+Limited$',
+            r',?\s+Ltd\.?$',
+            r',?\s+Holdings?$',
+            r',?\s+Group$',
+        ]
+
+        for pattern in suffix_patterns:
+            shortened = re.sub(pattern, '', normalized, flags=re.IGNORECASE).strip(' ,.-')
+            if shortened:
+                variants.add(shortened)
+
+        return sorted(variants, key=len, reverse=True)
+
     def _remove_company_prefix(self, text, company_name):
         """上段に会社名を出しているので、見出し冒頭の重複を取り除く。"""
         text = re.sub(r'\s+', ' ', text or '').strip()
-        company_name = re.sub(r'\s+', ' ', company_name or '').strip()
 
-        if company_name and text.lower().startswith(company_name.lower()):
-            text = text[len(company_name):].lstrip(' ,.-:;')
+        for name in self._company_name_variants(company_name):
+            if text.lower().startswith(name.lower()):
+                text = text[len(name):].lstrip(' ,.-:;')
+                break
 
         return text[:1].upper() + text[1:] if text else text
 
