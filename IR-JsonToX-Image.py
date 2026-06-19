@@ -73,6 +73,28 @@ CATEGORY_PRIORITY = {
     "general_ir": 17
 }
 
+# 英語圏投資家向けの固定タグ + IRタイプ別タグ
+CORE_HASHTAGS = "#JapanStocks #JapaneseStocks #JapanIR"
+IR_TYPE_HASHTAGS = {
+    "tender_offer": "#TenderOffer",
+    "m_and_a_alliance": "#MandA",
+    "financial_summary": "#Earnings",
+    "business_update": "#CorporateNews",
+    "earnings_guidance": "#EarningsGuidance",
+    "dividend": "#Dividends",
+    "share_buyback": "#Buybacks",
+    "capital_policy": "#CapitalPolicy",
+    "share_cancellation": "#ShareCancellation",
+    "corporate_restructuring": "#Restructuring",
+    "product_announcement": "#ProductNews",
+    "executive_change": "#ManagementChange",
+    "sales_update": "#SalesUpdate",
+    "esg_sustainability": "#ESG",
+    "stock_option": "#StockOptions",
+    "disclosure_update": "#Disclosure",
+    "general_ir": "#CorporateNews",
+}
+
 
 # ============================================================
 # ユーティリティ関数
@@ -91,6 +113,12 @@ def get_importance_stars(importance_str):
 def get_category_priority(ir_type):
     """カテゴリの優先順位を取得"""
     return CATEGORY_PRIORITY.get(ir_type, 99)
+
+
+def get_hashtags(ir_type):
+    """IRタイプに応じたハッシュタグを取得"""
+    category_tag = IR_TYPE_HASHTAGS.get(ir_type, "#CorporateNews")
+    return f"{CORE_HASHTAGS} {category_tag}"
 
 
 def format_datetime_for_api(date_str, time_str):
@@ -226,7 +254,9 @@ class TweetGenerator:
         formatted_date = date_obj.strftime('%b %d, %Y')
         stock_code = ir['stock_code']
         company_name = ir['company_name']
-        ir_type = ir['ir_type'].replace('_', ' ').title()
+        ir_type_key = ir['ir_type']
+        ir_type = ir_type_key.replace('_', ' ').title()
+        hashtags = get_hashtags(ir_type_key)
 
         company_line = f"{company_name} ({stock_code})" if stock_code else company_name
         headline = f"Japan IR Highlight - {formatted_date}"
@@ -239,19 +269,8 @@ class TweetGenerator:
                 company_line,
                 ir_type,
                 "",
-                "See the key update in the image.",
-                "",
                 "japanir.jp/en",
-                "#JapanStocks #IR",
-            ],
-            [
-                headline,
-                "",
-                company_line,
-                ir_type,
-                "",
-                "japanir.jp/en",
-                "#JapanStocks #IR",
+                hashtags,
             ],
             [
                 short_headline,
@@ -260,7 +279,7 @@ class TweetGenerator:
                 ir_type,
                 "",
                 "japanir.jp/en",
-                "#JapanStocks #IR",
+                hashtags,
             ],
             [
                 short_headline,
@@ -268,7 +287,7 @@ class TweetGenerator:
                 f"{stock_code} - {ir_type}" if stock_code else ir_type,
                 "",
                 "japanir.jp/en",
-                "#JapanStocks #IR",
+                hashtags,
             ],
         ]
 
