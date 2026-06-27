@@ -338,7 +338,7 @@ Input: {summary}
 Output: (around 30 chars, max 45, no quotes)"""
 
             response = self.openai_client.chat.completions.create(
-                model="gpt-4.1-mini",
+                model="gpt-5-nano",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=60
             )
